@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Real-Time Monitoring Platform</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">DEVOPS / SYSTEMS INTEGRATION</p>
+        <h1>Real-Time Monitoring Platform</h1>
+        <p class="sub">Live system metrics, health checks, alert routing, and operational visibility.</p>
+      </div>
+      <div class="header-actions"><button id="demoButton" class="demo-button" onclick="runDemo()">Run E2E Alert Demo</button><div id="healthBadge" class="badge">Loading…</div></div>
+    </header>
+
+    <section class="cards">
+      <article class="card"><span>CPU Usage</span><strong id="cpu">--%</strong><div class="bar"><i id="cpuBar"></i></div></article>
+      <article class="card"><span>Memory Usage</span><strong id="memory">--%</strong><div class="bar"><i id="memoryBar"></i></div></article>
+      <article class="card"><span>Disk Usage</span><strong id="disk">--%</strong><div class="bar"><i id="diskBar"></i></div></article>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-head"><h2>System Trend</h2><small>Last 60 samples</small></div>
+        <canvas id="trend" width="900" height="320"></canvas>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h2>Active / Recent Alerts</h2><small>Alertmanager webhook</small></div>
+        <div id="alerts" class="alerts"><p class="muted">No alerts received yet.</p></div>
+      </article>
+    </section>
+
+    <footer>
+      <span>Python · Flask · Prometheus · Alertmanager · Docker</span>
+      <span id="updated">Waiting for data…</span>
+    </footer>
+  </main>
+
+<script>
+const ids = id => document.getElementById(id);
+function setMetric(name, value) {
+  ids(name).textContent = `${value}%`;
+  ids(`${name}Bar`).style.width = `${Math.min(100, value)}%`;
+}
+async function refreshStatus() {
+  const r = await fetch('/api/status');
+  const d = await r.json();
+  setMetric('cpu', d.cpu || 0); setMetric('memory', d.memory || 0); setMetric('disk', d.disk || 0);
+  const b = ids('healthBadge');
+  b.textContent = (d.health || 'unknown').toUpperCase();
+  b.className = `badge ${d.health === 'healthy' ? 'ok' : 'warn'}`;
+  ids('updated').textContent = `Updated: ${d.last_updated || '--'}`;
+}
+function drawChart(data) {
+  const canvas = ids('trend'); const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H); ctx.strokeStyle = '#25324a'; ctx.lineWidth = 1;
+  for(let i=0;i<=4;i++){ const y=20+i*(H-40)/4; ctx.beginPath(); ctx.moveTo(35,y); ctx.lineTo(W-15,y); ctx.stroke(); }
+  const series = [{k:'cpu'},{k:'memory'},{k:'disk'}];
+  series.forEach((s,si)=>{
+    ctx.beginPath(); ctx.lineWidth=2.5; ctx.strokeStyle=['#73a7ff','#6ee7b7','#fbbf24'][si];
+    data.forEach((p,i)=>{ const x=35+i*Math.max(1,(W-55)/Math.max(1,data.length-1)); const y=H-20-(p[s.k]/100)*(H-40); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.stroke();
+  });
+}
+async function refreshHistory(){ const r=await fetch('/api/history'); drawChart(await r.json()); }
+async function refreshAlerts(){
+  const r=await fetch('/api/alerts'); const data=await r.json(); const box=ids('alerts');
+  if(!data.length){ box.innerHTML='<p class="muted">No alerts received yet.</p>'; return; }
+  box.innerHTML=data.slice(0,8).map(a=>`<div class="alert"><b>${(a.labels.alertname||'Alert')}</b><span>${a.status}</span><p>${a.annotations.summary||a.annotations.description||'No description'}</p></div>`).join('');
+}
+async function runDemo(){
+  const btn=ids('demoButton');
+  btn.disabled=true; btn.textContent='Triggering…';
+  try{
+    const r=await fetch('/api/demo/alert',{method:'POST'});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    btn.textContent='Demo triggered ✓';
+    setTimeout(()=>{btn.textContent='Run E2E Alert Demo';btn.disabled=false;},12000);
+  }catch(e){
+    console.error(e); btn.textContent='Demo failed';
+    setTimeout(()=>{btn.textContent='Run E2E Alert Demo';btn.disabled=false;},3000);
+  }
+}
+async function refreshAll(){ try{ await Promise.all([refreshStatus(),refreshHistory(),refreshAlerts()]); }catch(e){ console.error(e); } }
+refreshAll(); setInterval(refreshAll,2000);
+</script>
+</body>
+</html>

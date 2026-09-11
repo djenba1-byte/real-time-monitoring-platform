@@ -1,0 +1,42 @@
+groups:
+  - name: system-alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: system_cpu_usage_percent > 85
+        for: 20s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage has remained above 85% for 20 seconds."
+
+      - alert: HighMemoryUsage
+        expr: system_memory_usage_percent > 85
+        for: 20s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage has remained above 85% for 20 seconds."
+
+      - alert: ApplicationDegraded
+        expr: app_health_status == 0
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application health degraded"
+          description: "The application health status is reporting an unhealthy state."
+
+
+  - name: portfolio-demo
+    rules:
+      - alert: PortfolioEndToEndDemo
+        expr: portfolio_demo_alert == 1
+        for: 5s
+        labels:
+          severity: info
+          source: portfolio-demo
+        annotations:
+          summary: "End-to-end alert pipeline verified"
+          description: "Prometheus detected the demo metric, fired this rule, routed it through Alertmanager, and delivered it to the Flask webhook."

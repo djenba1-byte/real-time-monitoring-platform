@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      MONITOR_INTERVAL_SECONDS: "${MONITOR_INTERVAL_SECONDS:-2}"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.0
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    depends_on:
+      - app
+    restart: unless-stopped
