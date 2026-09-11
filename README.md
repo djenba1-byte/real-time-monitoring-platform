@@ -68,7 +68,7 @@ notes, see **[docs/architecture.md](docs/architecture.md)**.
 ### Start the stack
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/real-time-monitoring-platform.git
+git clone https://github.com/djenba1-byte/real-time-monitoring-platform.git
 cd real-time-monitoring-platform
 cp .env.example .env   # optional; on PowerShell use: Copy-Item .env.example .env
 docker compose up --build -d
@@ -291,3 +291,4 @@ See **[CHANGELOG.md](CHANGELOG.md)**.
 ## License
 
 Released under the **MIT License**. See **[LICENSE](LICENSE)**.
+
